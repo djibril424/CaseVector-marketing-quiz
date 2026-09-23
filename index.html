@@ -46,14 +46,23 @@
  .cv-q.unanswered.cv-q-title{ color:#c2410c; }
  .cv-q-title{ font-size:14px; font-weight:600; margin:0 0 10px; }
  .cv-options{ display:flex; flex-wrap:wrap; gap:8px; }
- .cv-opt{
-    border:1px solid var(--border); background:#fff; border-radius:100px;
-    padding:8px 14px; font-size:13px; font-weight:500; cursor:pointer;
-    transition:all.15s; user-select:none; color:var(--navy);
+ .cv-select{
+    width:100%;
+    border:1px solid var(--border);
+    background:#fff;
+    border-radius:100px;
+    padding:10px 40px 10px 14px;
+    font-size:13px;
+    font-weight:500;
+    color:var(--navy);
+    cursor:pointer;
+    outline:none;
+    transition:all.15s;
+    appearance:auto;
   }
- .cv-opt:hover{ border-color:var(--navy); }
- .cv-opt.selected{ background:var(--navy); border-color:var(--navy); color:#fff; }
- .cv-opt.selected.gold{ background:var(--gold); border-color:var(--gold); color:var(--navy); }
+ .cv-select:hover{ border-color:var(--navy); }
+ .cv-select:focus{ border-color:var(--navy); }
+ .cv-select option{ color:var(--navy); }
  .cv-nav{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:12px; }
  .cv-btn{
     border:0; border-radius:100px; padding:10px 18px; font-size:13px; font-weight:600;
@@ -76,14 +85,17 @@
  .cv-input{ flex:1; border:1px solid var(--border); border-radius:100px; padding:10px 14px; font-size:13px; outline:none; }
  .cv-input:focus{ border-color:var(--navy); }
  .cv-small{ font-size:11px; color:var(--muted); margin-top:8px; }
-  @media(max-width:520px){.cv-options{ flex-direction:column; }.cv-opt{ border-radius:12px; width:100%; text-align:left; }.cv-widget{ padding:16px; } }
+  @media(max-width:520px){
+    .cv-options{ flex-direction:column; }
+    .cv-select{ border-radius:12px; width:100%; }
+    .cv-widget{ padding:16px; }
+  }
 </style>
 </head>
 <body>
 <div id="cv-quiz-root">
   <div class="cv-widget" id="cv-widget"></div>
 </div>
-
 <script>
 // --- CONFIGURE EMAILJS HERE ---
 const EMAILJS_CONFIG = {
@@ -95,7 +107,6 @@ const EMAILJS_CONFIG = {
 if(EMAILJS_CONFIG.PUBLIC_KEY!== "YOUR_PUBLIC_KEY"){
   emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
 }
-
 // --- QUIZ DATA + SCORING ---
 // Scores: {agency, inhouse, hybrid}
 const QUESTIONS = [
@@ -206,11 +217,9 @@ const QUESTIONS = [
     {label:"Consistent, always-on engine needed", scores:{agency:0, inhouse:4, hybrid:2}},
   ]},
 ];
-
 let state = { step:0, answers:{} }; // step = group index (0..5)
 const GROUP = 3;
 const totalGroups = Math.ceil(QUESTIONS.length / GROUP);
-
 function render(){
   const root = document.getElementById('cv-widget');
   if(state.result){
@@ -223,7 +232,6 @@ function render(){
   const answeredInGroup = qs.filter(q=>state.answers[q.id]!=null).length;
   const progressText = `Questions ${start+1}–${Math.min(start+GROUP, QUESTIONS.length)} of ${QUESTIONS.length}`;
   const progressPct = ((start + answeredInGroup)/QUESTIONS.length)*100;
-
   root.innerHTML = `
     <div class="cv-header">
       <h2>In-House Marketing VS Marketing Agency</h2>
@@ -239,9 +247,14 @@ function render(){
         const unanswered = state.showValidation && sel==null;
         return `<div class="cv-q ${unanswered?'unanswered':''}" data-q="${q.id}">
           <div class="cv-q-title">${q.id}. ${q.text}${unanswered?' — required':''}</div>
-          <div class="cv-options">${q.options.map((o,i)=>`
-            <button class="cv-opt ${sel===i?'selected':''}" data-q="${q.id}" data-i="${i}">${o.label}</button>
-          `).join('')}</div>
+          <div class="cv-options">
+            <select class="cv-select" data-q="${q.id}">
+              <option value="" ${sel==null?'selected':''} disabled>Select an option</option>
+              ${q.options.map((o,i)=>`
+                <option value="${i}" ${sel===i?'selected':''}>${o.label}</option>
+              `).join('')}
+            </select>
+          </div>
         </div>`
       }).join('')}
       <div class="cv-nav">
@@ -252,10 +265,11 @@ function render(){
       </div>
     </div>
   `;
-  // bind options
-  root.querySelectorAll('.cv-opt').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const qid = parseInt(b.dataset.q); const idx = parseInt(b.dataset.i);
+  // bind dropdowns
+  root.querySelectorAll('.cv-select').forEach(select=>{
+    select.addEventListener('change', ()=>{
+      const qid = parseInt(select.dataset.q);
+      const idx = parseInt(select.value);
       state.answers[qid]=idx;
       state.showValidation=false;
       render();
@@ -268,7 +282,6 @@ function render(){
     else { state.step++; state.showValidation=false; render(); }
   });
 }
-
 function calculateResult(){
   let scores={agency:0,inhouse:0,hybrid:0};
   let summary=[];
@@ -288,10 +301,8 @@ function calculateResult(){
   else if(scores.inhouse>scores.agency && scores.inhouse>scores.hybrid) winner='inhouse';
   else if(scores.hybrid>=scores.agency && scores.hybrid>=scores.inhouse) winner='hybrid';
   else if(scores.agency===scores.inhouse) winner='hybrid';
-
   state.result={winner, scores, summary};
 }
-
 function renderResult(){
   const {winner, scores} = state.result;
   const copy={
@@ -332,7 +343,6 @@ function renderResult(){
     </div>
   `;
 }
-
 function bindResult(){
   document.getElementById('cv-restart').addEventListener('click', ()=>{
     state={step:0, answers:{}}; render();
@@ -365,7 +375,6 @@ function bindResult(){
     }
   });
 }
-
 render();
 </script>
 </body>
